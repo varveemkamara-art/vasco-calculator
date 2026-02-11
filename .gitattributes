@@ -1,2 +1,356 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vasco Calculator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+
+        .calculator {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 320px;
+        }
+
+        .display {
+            background: #0d7377;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: right;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+
+        .previous-operand {
+            color: #b8f3d1;
+            font-size: 18px;
+            min-height: 24px;
+        }
+
+        .current-operand {
+            color: #fff;
+            font-size: 36px;
+            font-weight: 300;
+            word-wrap: break-word;
+            word-break: break-all;
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        button {
+            border: none;
+            border-radius: 10px;
+            font-size: 20px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .number, .decimal {
+            background: #14a37f;
+            color: #fff;
+        }
+
+        .number:hover, .decimal:hover {
+            background: #17c99a;
+        }
+
+        .operator {
+            background: #0d7377;
+            color: #fff;
+        }
+
+        .operator:hover {
+            background: #0f8b8f;
+        }
+
+        .operator.active {
+            background: #fff;
+            color: #0d7377;
+        }
+
+        .function {
+            background: #b8f3d1;
+            color: #0d7377;
+        }
+
+        .function:hover {
+            background: #c8f5dd;
+        }
+
+        .equals {
+            background: #0d7377;
+            color: #fff;
+            grid-column: span 2;
+        }
+
+        .equals:hover {
+            background: #0f8b8f;
+        }
+
+        .zero {
+            grid-column: span 2;
+        }
+
+        .calculator-title {
+            color: #000;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 28px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            animation: shine 2s infinite;
+            background: linear-gradient(90deg, #000 0%, #333 50%, #000 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes shine {
+            0% {
+                background-position: 0% center;
+            }
+            50% {
+                background-position: 100% center;
+            }
+            100% {
+                background-position: 0% center;
+            }
+        }
+
+        .by-vasco {
+            color: #ffd700;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <h1 class="calculator-title">Vasco Calculator</h1>
+        <div class="display">
+            <div class="by-vasco" id="by-vasco"></div>
+            <div class="previous-operand" id="previous-operand"></div>
+            <div class="current-operand" id="current-operand">0</div>
+        </div>
+        <div class="buttons">
+            <button class="function" onclick="calculator.clear()">AC</button>
+            <button class="function" onclick="calculator.toggleSign()">+/-</button>
+            <button class="function" onclick="calculator.percent()">%</button>
+            <button class="operator" onclick="calculator.chooseOperation('÷')">÷</button>
+            
+            <button class="number" onclick="calculator.appendNumber('7')">7</button>
+            <button class="number" onclick="calculator.appendNumber('8')">8</button>
+            <button class="number" onclick="calculator.appendNumber('9')">9</button>
+            <button class="operator" onclick="calculator.chooseOperation('×')">×</button>
+            
+            <button class="number" onclick="calculator.appendNumber('4')">4</button>
+            <button class="number" onclick="calculator.appendNumber('5')">5</button>
+            <button class="number" onclick="calculator.appendNumber('6')">6</button>
+            <button class="operator" onclick="calculator.chooseOperation('-')">-</button>
+            
+            <button class="number" onclick="calculator.appendNumber('1')">1</button>
+            <button class="number" onclick="calculator.appendNumber('2')">2</button>
+            <button class="number" onclick="calculator.appendNumber('3')">3</button>
+            <button class="operator" onclick="calculator.chooseOperation('+')">+</button>
+            
+            <button class="number zero" onclick="calculator.appendNumber('0')">0</button>
+            <button class="decimal" onclick="calculator.appendNumber('.')">.</button>
+            <button class="equals" onclick="calculator.compute()">=</button>
+        </div>
+    </div>
+
+    <script>
+        class Calculator {
+            constructor(previousOperandElement, currentOperandElement, byVascoElement) {
+                this.previousOperandElement = previousOperandElement;
+                this.currentOperandElement = currentOperandElement;
+                this.byVascoElement = byVascoElement;
+                this.clear();
+            }
+
+            clear() {
+                this.currentOperand = '0';
+                this.previousOperand = '';
+                this.operation = undefined;
+                this.shouldResetScreen = false;
+            }
+
+            toggleSign() {
+                if (this.currentOperand === '0') return;
+                this.currentOperand = String(parseFloat(this.currentOperand) * -1);
+            }
+
+            percent() {
+                if (this.currentOperand === '0') return;
+                this.currentOperand = String(parseFloat(this.currentOperand) / 100);
+            }
+
+            appendNumber(number) {
+                if (this.shouldResetScreen) {
+                    this.currentOperand = '';
+                    this.shouldResetScreen = false;
+                }
+                
+                if (number === '.' && this.currentOperand.includes('.')) return;
+                if (this.currentOperand === '0' && number !== '.') {
+                    this.currentOperand = number;
+                } else {
+                    this.currentOperand += number;
+                }
+            }
+
+            chooseOperation(operation) {
+                if (this.currentOperand === '') return;
+                if (this.previousOperand !== '') {
+                    this.compute();
+                }
+                this.operation = operation;
+                this.previousOperand = this.currentOperand;
+                this.shouldResetScreen = true;
+            }
+
+            compute() {
+                let computation;
+                const prev = parseFloat(this.previousOperand);
+                const current = parseFloat(this.currentOperand);
+                if (isNaN(prev) || isNaN(current)) return;
+
+                switch (this.operation) {
+                    case '+':
+                        computation = prev + current;
+                        break;
+                    case '-':
+                        computation = prev - current;
+                        break;
+                    case '×':
+                        computation = prev * current;
+                        break;
+                    case '÷':
+                        computation = prev / current;
+                        break;
+                    default:
+                        return;
+                }
+
+                this.currentOperand = String(computation);
+                this.operation = undefined;
+                this.previousOperand = '';
+                this.shouldResetScreen = true;
+            }
+
+            updateDisplay() {
+                this.currentOperandElement.textContent = this.currentOperand;
+                
+                // Show "by Vasco" when displaying a computed result
+                if (this.shouldResetScreen && this.operation === undefined && this.previousOperand === '') {
+                    this.byVascoElement.textContent = 'by Vasco';
+                } else {
+                    this.byVascoElement.textContent = '';
+                }
+                
+                if (this.operation != null) {
+                    this.previousOperandElement.textContent = 
+                        `${this.previousOperand} ${this.operation}`;
+                } else {
+                    this.previousOperandElement.textContent = '';
+                }
+            }
+        }
+
+        const previousOperandElement = document.getElementById('previous-operand');
+        const currentOperandElement = document.getElementById('current-operand');
+        const byVascoElement = document.getElementById('by-vasco');
+
+        const calculator = new Calculator(previousOperandElement, currentOperandElement, byVascoElement);
+
+        // Update display whenever any operation happens
+        const originalAppendNumber = calculator.appendNumber.bind(calculator);
+        calculator.appendNumber = function(number) {
+            originalAppendNumber(number);
+            this.updateDisplay();
+        };
+
+        const originalChooseOperation = calculator.chooseOperation.bind(calculator);
+        calculator.chooseOperation = function(operation) {
+            originalChooseOperation(operation);
+            this.updateDisplay();
+        };
+
+        const originalCompute = calculator.compute.bind(calculator);
+        calculator.compute = function() {
+            originalCompute();
+            this.updateDisplay();
+        };
+
+        const originalClear = calculator.clear.bind(calculator);
+        calculator.clear = function() {
+            originalClear();
+            this.updateDisplay();
+        };
+
+        const originalToggleSign = calculator.toggleSign.bind(calculator);
+        calculator.toggleSign = function() {
+            originalToggleSign();
+            this.updateDisplay();
+        };
+
+        const originalPercent = calculator.percent.bind(calculator);
+        calculator.percent = function() {
+            originalPercent();
+            this.updateDisplay();
+        };
+
+        // Keyboard support
+        document.addEventListener('keydown', (e) => {
+            if (e.key >= '0' && e.key <= '9') calculator.appendNumber(e.key);
+            if (e.key === '.') calculator.appendNumber('.');
+            if (e.key === '=' || e.key === 'Enter') calculator.compute();
+            if (e.key === 'Escape') calculator.clear();
+            if (e.key === '+') calculator.chooseOperation('+');
+            if (e.key === '-') calculator.chooseOperation('-');
+            if (e.key === '*') calculator.chooseOperation('×');
+            if (e.key === '/') {
+                e.preventDefault();
+                calculator.chooseOperation('÷');
+            }
+            if (e.key === '%') calculator.percent();
+        });
+    </script>
+</body>
+</html> 
